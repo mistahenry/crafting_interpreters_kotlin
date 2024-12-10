@@ -3,14 +3,36 @@ package com.craftinginterpreters.lox
 import com.craftinginterpreters.lox.Expr.Assign
 import com.craftinginterpreters.lox.Expr.Logical
 import com.craftinginterpreters.lox.Lox.runtimeError
+import com.craftinginterpreters.lox.Stmt.Return
 import com.craftinginterpreters.lox.Stmt.While
 
 
 internal class Interpreter : Expr.Visitor<Any?>,
     Stmt.Visitor<Void?>{
-    private var environment = Environment(
+
+    constructor(){
+        globals.define("clock", object : LoxCallable {
+            override fun arity(): Int {
+                return 0
+            }
+
+            override fun call(
+                interpreter: Interpreter,
+                arguments: List<Any?>
+            ): Any {
+                return System.currentTimeMillis().toDouble() / 1000.0
+            }
+
+            override fun toString(): String {
+                return "<native fn>"
+            }
+        })
+    }
+
+    val globals = Environment(
         enclosing = null
     )
+    private var environment = globals
     fun interpret(statements: List<Stmt?>) {
         try {
             for (statement in statements) {
@@ -99,8 +121,36 @@ internal class Interpreter : Expr.Visitor<Any?>,
         }
     }
 
+    override fun visitCallExpr(expr: Expr.Call): Any? {
+        val callee = evaluate(expr.callee)
+        val arguments: MutableList<Any?> = ArrayList()
+        for (argument in expr.arguments) {
+            arguments.add(evaluate(argument))
+        }
+
+        val function: LoxCallable = callee as LoxCallable?
+            ?: throw RuntimeError(
+                expr.paren,
+                "Can only call functions and classes."
+            )
+        if (arguments.size != function.arity()) {
+            throw RuntimeError(
+                expr.paren, "Expected " +
+                        function.arity() + " arguments but got " +
+                        arguments.size + "."
+            )
+        }
+        return function.call(this, arguments)
+    }
+
     override fun visitExpressionStmt(stmt: Stmt.Expression): Void? {
         evaluate(stmt.expression)
+        return null
+    }
+
+    override fun visitFunctionStmt(stmt: Stmt.Function): Void? {
+        val function = LoxFunction(stmt, environment)
+        environment.define(stmt.name.lexeme, function)
         return null
     }
 
@@ -119,6 +169,13 @@ internal class Interpreter : Expr.Visitor<Any?>,
         println(stringify(value))
         return null
     }
+
+    override fun visitReturnStmt(stmt: Return): Void? {
+        var value: Any? = null
+        if (stmt.value != null) value = evaluate(stmt.value)
+        throw Return(value)
+    }
+
     override fun visitVarStmt(stmt: Stmt.Var): Void? {
         var value: Any? = null
         if (stmt.initializer != null) {
@@ -158,7 +215,7 @@ internal class Interpreter : Expr.Visitor<Any?>,
     private fun execute(stmt: Stmt) {
         stmt.accept(this)
     }
-    private fun executeBlock(
+    fun executeBlock(
         statements: List<Stmt?>,
         environment: Environment?
     ) {

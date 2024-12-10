@@ -9,6 +9,8 @@ internal abstract class Stmt {
         fun visitBlockStmt(stmt: Block): R
         fun visitIfStmt(stmt: If): R
         fun visitWhileStmt(stmt: While): R
+        fun visitFunctionStmt(stmt: Function): R
+        fun visitReturnStmt(stmt: Return): R
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R
@@ -35,7 +37,7 @@ internal abstract class Stmt {
             return visitor.visitBlockStmt(this)
         }
     }
-    internal class If(val condition: Expr, val thenBranch: Stmt, val elseBranch: Stmt) : Stmt() {
+    internal class If(val condition: Expr, val thenBranch: Stmt, val elseBranch: Stmt?) : Stmt() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitIfStmt(this)
         }
@@ -43,6 +45,19 @@ internal abstract class Stmt {
     internal class While(val condition: Expr, val body: Stmt) : Stmt() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitWhileStmt(this)
+        }
+    }
+
+    internal class Function(val name: Token, val params: List<Token>, val body: List<Stmt?>) :
+        Stmt() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitFunctionStmt(this)
+        }
+    }
+
+    internal class Return(val keyword: Token, val value: Expr?) : Stmt() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitReturnStmt(this)
         }
     }
 }

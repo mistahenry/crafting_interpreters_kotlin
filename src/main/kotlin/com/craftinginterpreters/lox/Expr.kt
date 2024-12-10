@@ -10,6 +10,8 @@ internal abstract class Expr {
         fun visitVariableExpr(expr: Variable): R
         fun visitAssignExpr(expr: Assign): R
         fun visitLogicalExpr(expr: Logical): R
+        fun visitCallExpr(expr: Call): R
+
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R
@@ -53,6 +55,12 @@ internal abstract class Expr {
         Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitLogicalExpr(this)
+        }
+    }
+    internal class Call(val callee: Expr, val paren: Token, val arguments: List<Expr>) :
+        Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitCallExpr(this)
         }
     }
 }
