@@ -7,6 +7,18 @@ internal class Environment(val enclosing: Environment?) {
         values[name] = value
     }
 
+    fun ancestor(distance: Int): Environment? {
+        var environment: Environment? = this
+        repeat(distance) {
+            environment = environment?.enclosing
+        }
+        return environment
+    }
+
+    fun getAt(distance: Int, name: String?): Any? {
+        return ancestor(distance)?.values?.get(name)
+    }
+
     operator fun get(name: Token): Any? {
         if (values.containsKey(name.lexeme)) {
             return values[name.lexeme]
@@ -32,4 +44,9 @@ internal class Environment(val enclosing: Environment?) {
             "Undefined variable '" + name.lexeme + "'."
         )
     }
+
+    fun assignAt(distance: Int, name: Token, value: Any?) {
+        ancestor(distance)!!.values[name.lexeme] = value
+    }
+
 }

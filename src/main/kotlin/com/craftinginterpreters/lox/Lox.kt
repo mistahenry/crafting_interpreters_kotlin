@@ -77,6 +77,10 @@ object Lox {
         // Stop if there was a syntax error.
         if (hadError) return
 
+        val resolver = Resolver(interpreter)
+        resolver.resolve(statements)
+        if (hadError) return
+
         interpreter.interpret(statements)
 //        println(AstPrinter().print(expression!!))
 

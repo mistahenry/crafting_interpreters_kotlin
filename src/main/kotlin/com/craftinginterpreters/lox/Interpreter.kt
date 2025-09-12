@@ -33,6 +33,8 @@ internal class Interpreter : Expr.Visitor<Any?>,
         enclosing = null
     )
     private var environment = globals
+    private val locals: MutableMap<Expr?, Int?> = hashMapOf()
+
     fun interpret(statements: List<Stmt?>) {
         try {
             for (statement in statements) {
@@ -71,8 +73,18 @@ internal class Interpreter : Expr.Visitor<Any?>,
         }
     }
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        return environment[expr.name]
+        return lookUpVariable(expr.name, expr)
     }
+
+    private fun lookUpVariable(name: Token, expr: Expr?): Any? {
+        val distance = locals.get(expr)
+        if (distance != null) {
+            return environment.getAt(distance, name.lexeme)
+        } else {
+            return globals.get(name)
+        }
+    }
+
     override fun visitBinaryExpr(expr: Expr.Binary): Any? {
         val left = evaluate(expr.left)
         val right = evaluate(expr.right)
@@ -193,6 +205,14 @@ internal class Interpreter : Expr.Visitor<Any?>,
     }
     override fun visitAssignExpr(expr: Assign): Any? {
         val value = evaluate(expr.value)
+
+        val distance = locals.get(expr)
+        if (distance != null) {
+            environment.assignAt(distance, expr.name, value)
+        } else {
+            globals.assign(expr.name, value)
+        }
+
         environment.assign(expr.name, value)
         return value
     }
@@ -215,6 +235,11 @@ internal class Interpreter : Expr.Visitor<Any?>,
     private fun execute(stmt: Stmt) {
         stmt.accept(this)
     }
+
+    fun resolve(expr: Expr?, depth: Int) {
+        locals.put(expr, depth)
+    }
+
     fun executeBlock(
         statements: List<Stmt?>,
         environment: Environment?
