@@ -1,7 +1,7 @@
 package com.craftinginterpreters.lox
 
-import com.craftinginterpreters.lox.Expr.Assign
-import com.craftinginterpreters.lox.Expr.Logical
+import com.craftinginterpreters.lox.Expr.*
+import com.craftinginterpreters.lox.Expr.Set
 import com.craftinginterpreters.lox.Stmt.Return
 import com.craftinginterpreters.lox.Stmt.While
 import com.craftinginterpreters.lox.TokenType.*
@@ -24,6 +24,7 @@ internal class Parser(private val tokens: List<Token>) {
     private fun declaration(): Stmt? {
         return try {
             if (match(VAR)) varDeclaration()
+                else if(match(CLASS)) return classDeclaration()
                 else if (match(FUN)) function("function")
                 else statement()
         } catch (error: ParseError) {
@@ -31,6 +32,21 @@ internal class Parser(private val tokens: List<Token>) {
             null
         }
     }
+
+    private fun classDeclaration(): Stmt {
+        val name: Token? = consume(IDENTIFIER, "Expect class name.")
+        consume(LEFT_BRACE, "Expect '{' before class body.")
+
+        val methods: MutableList<Stmt.Function?> = ArrayList<Stmt.Function?>()
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            methods.add(function("method"))
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after class body.")
+
+        return Stmt.Class(name, null, methods)
+    }
+
     private fun statement(): Stmt {
         return if(match(FOR))
             forStatement()
@@ -184,6 +200,10 @@ internal class Parser(private val tokens: List<Token>) {
                 val name = expr.name
                 return Assign(name, value)
             }
+            else if (expr is Expr.Get) {
+                val get = expr as Get?
+                return Set(get!!.`object`, get.name, value)
+            }
             error(equals, "Invalid assignment target.")
         }
         return expr
@@ -264,7 +284,15 @@ internal class Parser(private val tokens: List<Token>) {
         while (true) {
             if (match(LEFT_PAREN)) {
                 expr = finishCall(expr)
-            } else {
+            }
+            else if (match(DOT)) {
+                val name: Token = consume(
+                    IDENTIFIER,
+                    "Expect property name after '.'."
+                )
+                expr = Get(expr, name)
+            }
+            else {
                 break
             }
         }
@@ -293,6 +321,8 @@ internal class Parser(private val tokens: List<Token>) {
         if (match(NUMBER, STRING)) {
             return Expr.Literal(previous().literal!!)
         }
+        if (match(THIS)) return This(previous())
+
         if (match(IDENTIFIER)) {
             return Expr.Variable(previous())
         }

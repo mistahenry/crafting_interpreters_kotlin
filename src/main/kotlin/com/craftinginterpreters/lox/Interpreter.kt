@@ -1,7 +1,6 @@
 package com.craftinginterpreters.lox
 
-import com.craftinginterpreters.lox.Expr.Assign
-import com.craftinginterpreters.lox.Expr.Logical
+import com.craftinginterpreters.lox.Expr.*
 import com.craftinginterpreters.lox.Lox.runtimeError
 import com.craftinginterpreters.lox.Stmt.Return
 import com.craftinginterpreters.lox.Stmt.While
@@ -56,6 +55,25 @@ internal class Interpreter : Expr.Visitor<Any?>,
             if (!isTruthy(left)) return left
         }
         return evaluate(expr.right)
+    }
+
+    override fun visitSetExpr(expr: Expr.Set): Any? {
+        val `object` = evaluate(expr.`object`!!)
+
+        if (`object` !is LoxInstance) {
+            throw RuntimeError(
+                expr.name!!,
+                "Only instances have fields."
+            )
+        }
+
+        val value = evaluate(expr.value!!)
+        `object`.set(expr.name!!, value)
+        return value
+    }
+
+    override fun visitThisExpr(expr: This): Any? {
+        return lookUpVariable(expr.keyword, expr)
     }
 
     override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
@@ -155,13 +173,25 @@ internal class Interpreter : Expr.Visitor<Any?>,
         return function.call(this, arguments)
     }
 
+    override fun visitGetExpr(expr: Get): Any {
+        val `object` = evaluate(expr.`object`!!)
+        if (`object` is LoxInstance) {
+            return `object`.get(expr.name!!)!!
+        }
+
+        throw RuntimeError(
+            expr.name!!,
+            "Only instances have properties."
+        )
+    }
+
     override fun visitExpressionStmt(stmt: Stmt.Expression): Void? {
         evaluate(stmt.expression)
         return null
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function): Void? {
-        val function = LoxFunction(stmt, environment)
+        val function = LoxFunction(stmt, environment, false)
         environment.define(stmt.name.lexeme, function)
         return null
     }
@@ -221,6 +251,21 @@ internal class Interpreter : Expr.Visitor<Any?>,
         executeBlock(stmt.statements, Environment(environment))
         return null
     }
+
+    override fun visitClassStmt(stmt: Stmt.Class): Void? {
+        environment.define(stmt.name!!.lexeme, null)
+
+        val methods: MutableMap<String, LoxFunction> = hashMapOf()
+        for (method in stmt.methods!!) {
+            val function = LoxFunction(method!!, environment, method.name.lexeme == "init")
+            methods[method.name.lexeme] = function
+        }
+
+        val klass = LoxClass(stmt.name.lexeme, methods)
+        environment.assign(stmt.name, klass)
+        return null
+    }
+
     private fun checkNumberOperand(operator: Token, operand: Any?) {
         if (operand != null && operand is Double) return
         throw RuntimeError(operator, "Operand must be a number.")

@@ -30,20 +30,33 @@ object Lox {
     }
 
     private fun script(): String? {
+//        return """
+//            fun makeCounter() {
+//              var i = 0;
+//              fun count() {
+//                i = i + 1;
+//                print i;
+//              }
+//
+//              return count;
+//            }
+//
+//            var counter = makeCounter();
+//            counter(); // "1".
+//            counter(); // "2".
+//        """.trimIndent()
+
         return """
-            fun makeCounter() {
-              var i = 0;
-              fun count() {
-                i = i + 1;
-                print i;
-              }
-            
-              return count;
+            class Test{
+                init(){
+                    this.x = "foo";
+                }
+                doTest(){
+                    print this.x;
+                }
             }
-            
-            var counter = makeCounter();
-            counter(); // "1".
-            counter(); // "2".
+            var test = Test();
+            test.doTest();
         """.trimIndent()
     }
 

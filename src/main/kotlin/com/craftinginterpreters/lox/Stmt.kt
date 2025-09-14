@@ -11,6 +11,7 @@ internal abstract class Stmt {
         fun visitWhileStmt(stmt: While): R
         fun visitFunctionStmt(stmt: Function): R
         fun visitReturnStmt(stmt: Return): R
+        fun visitClassStmt(stmt: Class): R
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R
@@ -58,6 +59,16 @@ internal abstract class Stmt {
     internal class Return(val keyword: Token, val value: Expr?) : Stmt() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitReturnStmt(this)
+        }
+    }
+
+    internal class Class(
+        val name: Token?,
+        val superclass: Expr.Variable?,
+        val methods: MutableList<Function?>?
+    ) : Stmt() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitClassStmt(this)
         }
     }
 }

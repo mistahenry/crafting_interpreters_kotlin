@@ -11,6 +11,9 @@ internal abstract class Expr {
         fun visitAssignExpr(expr: Assign): R
         fun visitLogicalExpr(expr: Logical): R
         fun visitCallExpr(expr: Call): R
+        fun visitGetExpr(expr: Get): R
+        fun visitSetExpr(expr: Set): R
+        fun visitThisExpr(expr: This): R
 
     }
 
@@ -20,6 +23,18 @@ internal abstract class Expr {
         Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitBinaryExpr(this)
+        }
+    }
+
+    internal class Get(val `object`: Expr?, val name: Token?) : Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitGetExpr(this)
+        }
+    }
+
+    internal class Set(val `object`: Expr?, val name: Token?, val value: Expr?) : Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitSetExpr(this)
         }
     }
 
@@ -61,6 +76,12 @@ internal abstract class Expr {
         Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitCallExpr(this)
+        }
+    }
+
+    internal class This(val keyword: Token) : Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitThisExpr(this)
         }
     }
 }
