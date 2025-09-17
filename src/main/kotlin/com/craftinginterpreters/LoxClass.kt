@@ -1,6 +1,10 @@
 package com.craftinginterpreters.lox
 
-internal class LoxClass(val name: String?, val methods: MutableMap<String, LoxFunction>): LoxCallable {
+internal class LoxClass(
+    val name: String?,
+    val superclass: LoxClass?,
+    val methods: MutableMap<String, LoxFunction>
+): LoxCallable {
 
     override fun toString(): String {
         return name!!
@@ -19,6 +23,10 @@ internal class LoxClass(val name: String?, val methods: MutableMap<String, LoxFu
     fun findMethod(name: String?): LoxFunction? {
         if (methods.containsKey(name)) {
             return methods.get(name)
+        }
+
+        if (superclass != null) {
+            return superclass.findMethod(name)
         }
 
         return null

@@ -14,7 +14,7 @@ internal abstract class Expr {
         fun visitGetExpr(expr: Get): R
         fun visitSetExpr(expr: Set): R
         fun visitThisExpr(expr: This): R
-
+        fun visitSuperExpr(expr: Super): R
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R
@@ -82,6 +82,13 @@ internal abstract class Expr {
     internal class This(val keyword: Token) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitThisExpr(this)
+        }
+    }
+
+
+    internal class Super (val keyword: Token?, val method: Token?) : Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitSuperExpr(this)
         }
     }
 }

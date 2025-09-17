@@ -14,7 +14,8 @@ private enum class FunctionType {
 
 private enum class ClassType {
     NONE,
-    CLASS
+    CLASS,
+    SUBCLASS
 }
 
 
@@ -38,6 +39,25 @@ internal class Resolver(private val interpreter: Interpreter) :
 
         declare(stmt.name!!)
         define(stmt.name)
+
+        if (stmt.superclass != null &&
+            stmt.name.lexeme == stmt.superclass.name.lexeme
+        ) {
+            Lox.error(stmt.superclass.name,
+                "A class can't inherit from itself.");
+        }
+
+        if (stmt.superclass != null) {
+            currentClass = ClassType.SUBCLASS;
+            resolve(stmt.superclass)
+        }
+
+        // TODO: ok to have two begin scopes?
+        if (stmt.superclass != null) {
+            beginScope();
+            scopes.peek().put("super", true);
+        }
+
 
         beginScope()
         scopes.peek()["this"] = true;
@@ -156,6 +176,20 @@ internal class Resolver(private val interpreter: Interpreter) :
     override fun visitSetExpr(expr: Expr.Set): Void? {
         resolve(expr.value!!)
         resolve(expr.`object`!!)
+        return null
+    }
+
+    override fun visitSuperExpr(expr: Super): Void? {
+
+        if (currentClass == ClassType.NONE) {
+            Lox.error(expr.keyword!!,
+                "Can't use 'super' outside of a class.");
+        } else if (currentClass != ClassType.SUBCLASS) {
+            Lox.error(expr.keyword!!,
+                "Can't use 'super' in a class with no superclass.");
+        }
+
+        resolveLocal(expr, expr.keyword!!)
         return null
     }
 

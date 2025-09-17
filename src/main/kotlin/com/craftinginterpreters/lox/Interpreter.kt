@@ -72,6 +72,24 @@ internal class Interpreter : Expr.Visitor<Any?>,
         return value
     }
 
+    override fun visitSuperExpr(expr: Super): Any {
+        val distance: Int = locals.get(expr)!!
+        val superclass = environment.getAt(
+            distance, "super"
+        ) as LoxClass?
+
+        val `object` = environment.getAt(
+            distance - 1, "this"
+        ) as LoxInstance?
+
+        val method = superclass!!.findMethod(expr.method!!.lexeme) ?: throw RuntimeError(
+            expr.method,
+            "Undefined property '" + expr.method.lexeme + "'."
+        )
+
+        return method!!.bind(`object`)
+    }
+
     override fun visitThisExpr(expr: This): Any? {
         return lookUpVariable(expr.keyword, expr)
     }
@@ -253,7 +271,23 @@ internal class Interpreter : Expr.Visitor<Any?>,
     }
 
     override fun visitClassStmt(stmt: Stmt.Class): Void? {
+        var superclass: Any? = null
+        if (stmt.superclass != null) {
+            superclass = evaluate(stmt.superclass)
+            if (superclass !is LoxClass) {
+                throw RuntimeError(
+                    stmt.superclass.name,
+                    "Superclass must be a class."
+                )
+            }
+        }
+
         environment.define(stmt.name!!.lexeme, null)
+
+        if (stmt.superclass != null) {
+            environment = Environment(environment)
+            environment.define("super", superclass);
+        }
 
         val methods: MutableMap<String, LoxFunction> = hashMapOf()
         for (method in stmt.methods!!) {
@@ -261,7 +295,15 @@ internal class Interpreter : Expr.Visitor<Any?>,
             methods[method.name.lexeme] = function
         }
 
-        val klass = LoxClass(stmt.name.lexeme, methods)
+        val klass = LoxClass(
+            stmt.name.lexeme,
+            superclass as? LoxClass,
+            methods
+        )
+
+        if (superclass != null) {
+            environment = environment.enclosing!!;
+        }
         environment.assign(stmt.name, klass)
         return null
     }
@@ -300,7 +342,6 @@ internal class Interpreter : Expr.Visitor<Any?>,
         }
     }
     private fun evaluate(expr: Expr): Any? {
-        if(expr == null) return null
         return expr.accept(this)
     }
     private fun isTruthy(obj: Any?): Boolean {

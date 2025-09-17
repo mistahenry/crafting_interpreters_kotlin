@@ -47,16 +47,15 @@ object Lox {
 //        """.trimIndent()
 
         return """
-            class Test{
-                init(){
-                    this.x = "foo";
-                }
-                doTest(){
-                    print this.x;
-                }
+            fun fib(n) {
+              if (n < 2) return n;
+              return fib(n - 1) + fib(n - 2); 
             }
-            var test = Test();
-            test.doTest();
+            
+            var before = clock();
+            print fib(40);
+            var after = clock();
+            print after - before;
         """.trimIndent()
     }
 
